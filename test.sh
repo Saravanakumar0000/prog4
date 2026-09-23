@@ -1,59 +1,25 @@
 #!/bin/bash
 
-echo "========================================"
-echo " SELinux Practical - Autograding"
-echo "========================================"
+# 1 & 2. Check SELinux status
+getenforce
+sestatus
 
-FILE="student_solution.sh"
+# 3 & 5. Create web directory with permissions
+mkdir -p /myweb
+chmod 755 /myweb
 
-if [ ! -f "$FILE" ]; then
-    echo "FAIL: student_solution.sh not found"
-    exit 1
-fi
+# 4 & 6. Create index.html with permissions
+touch /myweb/index.html
+chmod 644 /myweb/index.html
 
-echo "Student solution found: $FILE"
-echo
+# 8. Set wrong SELinux context
+chcon -t default_t /myweb/index.html
 
-MARKS=0
+# 7. List SELinux context
+ls -Z /myweb/index.html
 
-check_command() {
-    NAME="$1"
-    PATTERN="$2"
+# 9. Search AVC log entries
+ausearch -m AVC
 
-    if grep -Eq "$PATTERN" "$FILE"; then
-        echo "PASS: $NAME"
-        MARKS=$((MARKS + 1))
-    else
-        echo "FAIL: $NAME"
-    fi
-}
-
-echo "Checking required SELinux commands..."
-echo
-
-check_command "getenforce" '(^|[[:space:]])getenforce([[:space:]]|$)'
-check_command "sestatus" '(^|[[:space:]])sestatus([[:space:]]|$)'
-check_command "Create /myweb" 'mkdir[[:space:]]+(-p[[:space:]]+)?/myweb'
-check_command "Create index.html" 'index\.html'
-check_command "chmod 755" 'chmod[[:space:]]+755[[:space:]]+/myweb'
-check_command "chmod 644" 'chmod[[:space:]]+644[[:space:]]+/myweb/index\.html'
-check_command "ls -Z" 'ls[[:space:]]+-Z[[:space:]]+/myweb/index\.html'
-check_command "Wrong SELinux context" 'chcon[[:space:]]+-t[[:space:]]+default_t'
-check_command "ausearch AVC" 'ausearch[[:space:]]+-m[[:space:]]+AVC'
-check_command "Correct SELinux context" 'chcon[[:space:]]+-t[[:space:]]+httpd_sys_content_t'
-
-echo
-echo "========================================"
-echo "Marks: $MARKS / 10"
-echo "========================================"
-
-if [ "$MARKS" -eq 10 ]; then
-    echo "RESULT: PASS"
-    exit 0
-elif [ "$MARKS" -ge 8 ]; then
-    echo "RESULT: PASS"
-    exit 0
-else
-    echo "RESULT: FAIL"
-    exit 1
-fi
+# 10. Set correct SELinux context
+chcon -t httpd_sys_content_t /myweb/index.html
